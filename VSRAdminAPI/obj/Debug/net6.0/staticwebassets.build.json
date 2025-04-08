@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "dGIVSehQOOXP0xwHmyeBYnpPknjZeW4dncqI11RDcSw=",
+  "Source": "VSRAdminAPI",
+  "BasePath": "_content/VSRAdminAPI",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
