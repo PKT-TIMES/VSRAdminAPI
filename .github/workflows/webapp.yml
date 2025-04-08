@@ -3,47 +3,48 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main  # Adjust the branch name as needed
+      - main
   pull_request:
     branches:
       - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-   
-    - name: Login to Azure Container Registry
-      uses: docker/login-action@v2
-      with:
-       registry: demowebapp1221.azurecr.io
-       login-server: demowebapp1221.azurecr.io
-       username: ${{ secrets.DOCKERIO_USERNAME }}
-       password: ${{ secrets.DOCKERIO_PASSWORD }}
-
-    - name: Set up .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '6.0.x' # Match the version used in Dockerfile
-
-    - name: Build Docker Image
-      run: docker build -t demowebapp1221.azurecr.io/demowebapp1221:latest -f VSRAdminAPI/Dockerfile .
-
-
-    - name: Push Docker Image to ACR
-      run: docker push demowebapp1221.azurecr.io/demowebapp1221:latest
 
     - name: Azure Login
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }} # Set in GitHub Secrets as JSON credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Deploy to Azure Web App
+    - name: Docker Login to ACR
+      uses: docker/login-action@v2
+      with:
+        registry: demowebapp1221.azurecr.io
+        username: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+        password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0.x'
+
+    - name: Build Docker Image
+      run: docker build -t demowebapp1221.azurecr.io/demowebapp1221:latest -f VSRAdminAPI/Dockerfile .
+
+    - name: Push Docker Image to ACR
+      run: docker push demowebapp1221.azurecr.io/demowebapp1221:latest
+
+    - name: Configure Web App to use container image
       run: |
-        az webapp create --resource-group myResourceGroup \
-                         --name myAppService \
-                         --plan demo-webapp \
-                         --deployment-container-image-name demowebapp1221.azurecr.io/:latest
+        az webapp config container set \
+          --name myAppService \
+          --resource-group myResourceGroup \
+          --docker-custom-image-name demowebapp1221.azurecr.io/demowebapp1221:latest \
+          --docker-registry-server-url https://demowebapp1221.azurecr.io \
+          --docker-registry-server-user ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }} \
+          --docker-registry-server-password ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
