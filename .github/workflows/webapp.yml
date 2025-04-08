@@ -22,7 +22,7 @@ jobs:
         dotnet-version: '6.0.x' # Match the version used in Dockerfile
 
     - name: Build Docker Image
-      run: docker build -t demowebapp1221.azurecr.io/demowebapp1221:latest -f ./Dockerfile .
+      run: docker build -t demowebapp1221.azurecr.io/demowebapp1221:latest .
 
     - name: Push Docker Image to ACR
       run: docker push demowebapp1221.azurecr.io/demowebapp1221:latest
