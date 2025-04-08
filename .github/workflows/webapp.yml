@@ -36,6 +36,11 @@ jobs:
     - name: Push Docker Image to ACR
       run: docker push demowebapp1221.azurecr.io/demowebapp1221:latest
 
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }} # Set in GitHub Secrets as JSON credentials
+
     - name: Deploy to Azure Web App
       run: |
         az webapp create --resource-group myResourceGroup \
