@@ -35,3 +35,10 @@ jobs:
 
     - name: Push Docker Image to ACR
       run: docker push demowebapp1221.azurecr.io/demowebapp1221:latest
+
+    - name: Deploy to Azure Web App
+      run: |
+        az webapp create --resource-group myResourceGroup \
+                         --name myAppService \
+                         --plan myAppPlan \
+                         --deployment-container-image-name demowebapp1221.azurecr.io/:latest
