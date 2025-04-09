@@ -20,8 +20,8 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: demowebapp12.azurecr.io
-        username: ${{ secrets.ACR_USERNAME }} # Renamed for clarity
-        password: ${{ secrets.ACR_PASSWORD }} # Renamed for clarity
+        username: ${{ secrets.DOCKERIO_USERNAME }} # Renamed for clarity
+        password: ${{ secrets.DOCKERIO_PASSWORD  }} # Renamed for clarity
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v1
