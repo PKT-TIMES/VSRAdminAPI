@@ -232,6 +232,8 @@ app.MapPost("/api/CustomerInfo", ([FromBody] CustomerInfo addcustomerinfo, [From
     }
 }).WithTags("CustomerInfo");
 
-
+// ✅ Root and Health endpoints
+app.MapGet("/", () => Results.Ok("VSRAdmin API is running ✅"));
+app.MapGet("/health", () => Results.Ok("Healthy ✅"));
 
 app.Run();
