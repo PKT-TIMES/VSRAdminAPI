@@ -3,90 +3,47 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main
+      - main  # Adjust the branch name as needed
   pull_request:
     branches:
       - main
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-
-    env:
-      RESOURCE_GROUP: demowebapp
-      APP_PLAN: myAppPlan
-      APP_NAME: myAppService
-      REGION: centralindia
-      ACR_NAME: demowebapp1221.azurecr.io
-      IMAGE_NAME: demowebapp1221
-      IMAGE_TAG: latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Docker Login to ACR
+   
+    - name: Login to Azure Container Registry
       uses: docker/login-action@v2
       with:
-        registry: ${{ env.ACR_NAME }}
-        username: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
-        password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+       registry: demowebapp1221.azurecr.io
+       login-server: demowebapp1221.azurecr.io
+       username: ${{ secrets.DOCKERIO_USERNAME }}
+       password: ${{ secrets.DOCKERIO_PASSWORD }}
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0.x'
+        dotnet-version: '6.0.x' # Match the version used in Dockerfile
 
     - name: Build Docker Image
-      run: docker build -t ${{ env.ACR_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -f VSRAdminAPI/Dockerfile .
+      run: docker build -t demowebapp1221.azurecr.io/demowebapp1221:latest -f VSRAdminAPI/Dockerfile .
+
 
     - name: Push Docker Image to ACR
-      run: docker push ${{ env.ACR_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+      run: docker push demowebapp1221.azurecr.io/demowebapp1221:latest
 
-    - name: Create App Service Plan (if not exists)
-      run: |
-        if ! az appservice plan show --name $APP_PLAN --resource-group $RESOURCE_GROUP &>/dev/null; then
-          az appservice plan create \
-            --name $APP_PLAN \
-            --resource-group $RESOURCE_GROUP \
-            --sku B1 \
-            --is-linux \
-            --location $REGION
-        else
-          echo "App Service Plan already exists."
-        fi
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }} # Set in GitHub Secrets as JSON credentials
 
-    - name: Create Web App (if not exists)
+    - name: Deploy to Azure Web App
       run: |
-        if ! az webapp show --name $APP_NAME --resource-group $RESOURCE_GROUP &>/dev/null; then
-          az webapp create \
-            --name $APP_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --plan $APP_PLAN \
-            --deployment-container-image-name $ACR_NAME/$IMAGE_NAME:$IMAGE_TAG
-        else
-          echo "Web App already exists."
-        fi
-
-    - name: Assign Role to Web App (Contributor)
-      run: |
-        WEBAPP_ID=$(az webapp show --name $APP_NAME --resource-group $RESOURCE_GROUP --query "id" -o tsv)
-        az role assignment create \
-          --assignee ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }} \
-          --role Contributor \
-          --scope $WEBAPP_ID || echo "Role might already be assigned."
-
-    - name: Configure Web App to use container image
-      run: |
-        az webapp config container set \
-          --name $APP_NAME \
-          --resource-group $RESOURCE_GROUP \
-          --container-image-name $ACR_NAME/$IMAGE_NAME:$IMAGE_TAG \
-          --container-registry-url https://$ACR_NAME \
-          --container-registry-user ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }} \
-          --container-registry-password ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+        az webapp create --resource-group myResourceGroup \
+                         --name myAppService \
+                         --plan demo-webapp \
+                         --deployment-container-image-name demowebapp1221.azurecr.io/:latest
