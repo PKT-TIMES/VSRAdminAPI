@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main
+      - main  # Adjust the branch name as needed
   pull_request:
     branches:
       - main
@@ -19,43 +19,31 @@ jobs:
     - name: Login to Azure Container Registry
       uses: docker/login-action@v2
       with:
-        registry: demowebapp12.azurecr.io
-        username: ${{ secrets.DOCKERIO_USERNAME }} # Renamed for clarity
-        password: ${{ secrets.DOCKERIO_PASSWORD  }} # Renamed for clarity
+       registry: demowebapp12.azurecr.io
+       login-server: demowebapp12.azurecr.io
+       username: ${{ secrets.DOCKERIO_USERNAME }}
+       password: ${{ secrets.DOCKERIO_PASSWORD }}
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0.x'
+        dotnet-version: '6.0.x' # Match the version used in Dockerfile
 
     - name: Build Docker Image
-      run: docker build -t demowebapp12.azurecr.io/demowebapp12:${{ github.sha }} -f VSRAdminAPI/Dockerfile .
+      run: docker build -t demowebapp12.azurecr.io/demowebapp12:latest -f VSRAdminAPI/Dockerfile .
+
 
     - name: Push Docker Image to ACR
-      run: docker push demowebapp12.azurecr.io/demowebapp12:${{ github.sha }}
+      run: docker push demowebapp12.azurecr.io/demowebapp12:latest
 
     - name: Azure Login
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }} # Set in GitHub Secrets as JSON credentials
 
     - name: Deploy to Azure Web App
       run: |
-        # First check if webapp exists
-        if ! az webapp show --name myAppService --resource-group myResourceGroup &>/dev/null; then
-          # Create webapp if it doesn't exist
-          az webapp create \
-            --resource-group myResourceGroup \
-            --name myAppService \
-            --plan demo-webapp \
-            --deployment-container-image-name demowebapp12.azurecr.io/demowebapp12:${{ github.sha }}
-        else
-          # Update existing webapp
-          az webapp config container set \
-            --name myAppService \
-            --resource-group myResourceGroup \
-            --docker-custom-image-name demowebapp12.azurecr.io/demowebapp12:${{ github.sha }} \
-            --docker-registry-server-url https://demowebapp12.azurecr.io \
-            --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
-            --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
-        fi
+       az webapp create --resource-group myResourceGroup \
+                 --name myAppService \
+                 --plan demo-webapp \
+                 --deployment-container-image-name demowebapp1221.azurecr.io/:latest
