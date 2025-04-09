@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build, Push Docker Image and Deploy to Web App
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,10 +19,10 @@ jobs:
     - name: Login to Azure Container Registry
       uses: docker/login-action@v2
       with:
-       registry: demowebapp12.azurecr.io
-       login-server: demowebapp12.azurecr.io
-       username: ${{ secrets.ACR_USERNAME }}
-       password: ${{ secrets.ACR_PASSWORD }}
+        registry: demowebapp12.azurecr.io
+        login-server: demowebapp12.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v1
@@ -32,22 +32,19 @@ jobs:
     - name: Build Docker Image
       run: docker build -t demowebapp12.azurecr.io/demowebapp12:latest -f VSRAdminAPI/Dockerfile .
 
-
     - name: Push Docker Image to ACR
       run: docker push demowebapp12.azurecr.io/demowebapp12:latest
 
     - name: Azure Login
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }} # Set in GitHub Secrets as JSON credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Configure Web App to Use ACR Image
-      run: |
-        az webapp config container set \
-         --name demo-service-unique123 \
-         --resource-group demowebapp1221 \
-         --docker-custom-image-name demowebapp12.azurecr.io/demowebapp12:latest \
-         --docker-registry-server-url https://demowebapp12.azurecr.io \
-         --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
-         --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
-
+    - name: Configure Web App to use ACR Image
+      uses: azure/webapps-container-deploy@v2
+      with:
+        app-name: 'your-web-app-name'  # Replace with your web app name
+        images: 'demowebapp12.azurecr.io/demowebapp12:latest'
+        registry-server: 'demowebapp12.azurecr.io'
+        registry-username: ${{ secrets.ACR_USERNAME }}
+        registry-password: ${{ secrets.ACR_PASSWORD }}
