@@ -46,4 +46,4 @@ jobs:
        az webapp create --resource-group myResourceGroup \
                  --name myAppService \
                  --plan demo-webapp \
-                 --deployment-container-image-name demowebapp1221.azurecr.io/:latest
+                 --deployment-container-image-name demowebapp12.azurecr.io/:latest
