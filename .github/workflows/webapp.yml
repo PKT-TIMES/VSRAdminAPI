@@ -43,7 +43,8 @@ jobs:
 
     - name: Deploy to Azure Web App
       run: |
-        az webapp create --resource-group myResourceGroup \
-                         --name myAppService \
-                         --plan demo-webapp \
-                         --deployment-container-image-name demowebapp1221.azurecr.io/:latest
+        az webapp create \
+          --resource-group VoiceSnapDevTeam \
+          --name demowebapp12 \
+          --plan CCItemAPI20250129185814Plan \
+          --deployment-container-image-name demowebapp1221.azurecr.io/demowebapp12:latest
