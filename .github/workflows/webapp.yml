@@ -1,15 +1,15 @@
-name: Build and Push Docker Image
+name: Build and Deploy to Azure Web App
 
 on:
   push:
     branches:
-      - main  # Adjust the branch name as needed
+      - main
   pull_request:
     branches:
       - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,31 +19,59 @@ jobs:
     - name: Login to Azure Container Registry
       uses: docker/login-action@v2
       with:
-       registry: demowebapp12.azurecr.io
-       login-server: demowebapp12.azurecr.io
-       username: ${{ secrets.DOCKERIO_USERNAME }}
-       password: ${{ secrets.DOCKERIO_PASSWORD }}
+        registry: demowebapp12.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}  # Renamed for clarity
+        password: ${{ secrets.ACR_PASSWORD }}  # Renamed for clarity
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0.x' # Match the version used in Dockerfile
+        dotnet-version: '6.0.x'
 
     - name: Build Docker Image
-      run: docker build -t demowebapp12.azurecr.io/demowebapp12:latest -f VSRAdminAPI/Dockerfile .
-
+      run: docker build -t demowebapp12.azurecr.io/demowebapp12:${{ github.sha }} -f VSRAdminAPI/Dockerfile .
 
     - name: Push Docker Image to ACR
-      run: docker push demowebapp12.azurecr.io/demowebapp12:latest
+      run: docker push demowebapp12.azurecr.io/demowebapp12:${{ github.sha }}
 
     - name: Azure Login
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }} # Set in GitHub Secrets as JSON credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Deploy to Azure Web App
       run: |
-       az webapp create --resource-group demowebapp1221  \
-                 --name my-AppService \
-                 --plan demo-webapp \
-                 --deployment-container-image-name demowebapp12.azurecr.io/:latest
+        # Generate unique name using first 7 characters of commit SHA
+        UNIQUE_NAME="app-${GITHUB_SHA:0:7}"
+        
+        # Check if webapp exists
+        if az webapp show --name $UNIQUE_NAME --resource-group demowebapp1221 &>/dev/null; then
+          echo "WebApp exists, updating container configuration..."
+          az webapp config container set \
+            --name $UNIQUE_NAME \
+            --resource-group demowebapp1221 \
+            --docker-custom-image-name demowebapp12.azurecr.io/demowebapp12:${{ github.sha }} \
+            --docker-registry-server-url https://demowebapp12.azurecr.io \
+            --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+            --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+        else
+          echo "Creating new WebApp..."
+          az webapp create \
+            --resource-group demowebapp1221 \
+            --name $UNIQUE_NAME \
+            --plan demo-webapp \
+            --runtime "DOTNETCORE:6.0" \
+            --deployment-container-image-name demowebapp12.azurecr.io/demowebapp12:${{ github.sha }}
+          
+          # Configure container settings for new app
+          az webapp config container set \
+            --name $UNIQUE_NAME \
+            --resource-group demowebapp1221 \
+            --docker-custom-image-name demowebapp12.azurecr.io/demowebapp12:${{ github.sha }} \
+            --docker-registry-server-url https://demowebapp12.azurecr.io \
+            --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+            --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+        fi
+        
+        # Output the deployed URL
+        echo "WebApp URL: https://$UNIQUE_NAME.azurewebsites.net"
