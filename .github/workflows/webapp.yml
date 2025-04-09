@@ -43,7 +43,10 @@ jobs:
 
     - name: Deploy to Azure Web App
       run: |
-       az webapp create --resource-group demowebapp1221  \
-                 --name demo-Service \
-                 --plan demo-webapp \
-                 --deployment-container-image-name demowebapp12.azurecr.io/:latest
+       az webapp config container set \
+        --name demo-service-unique123 \
+        --resource-group demowebapp1221 \
+        --docker-custom-image-name demowebapp12.azurecr.io/demowebapp12:latest \
+        --docker-registry-server-url https://demowebapp12.azurecr.io \
+        --docker-registry-server-user <y249fcbce-9bbb-48de-902f-d6942ce32c69> \
+        --docker-registry-server-password <yUBN8Q~uXeKbgvYI51dNNYiMMIxKzFv1ZPwKvBca0>
