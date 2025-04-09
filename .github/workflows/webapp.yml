@@ -44,6 +44,6 @@ jobs:
     - name: Deploy to Azure Web App
       run: |
        az webapp create --resource-group demowebapp1221  \
-                 --name Service \
+                 --name demo-Service \
                  --plan demo-webapp \
                  --deployment-container-image-name demowebapp12.azurecr.io/:latest
