@@ -1,15 +1,15 @@
-name: Build and Push Docker Image
+name: Build, Push and Deploy with Swagger
 
 on:
   push:
     branches:
-      - main  # Adjust the branch name as needed
+      - main
   pull_request:
     branches:
       - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,19 +19,23 @@ jobs:
     - name: Login to Azure Container Registry
       uses: docker/login-action@v2
       with:
-       registry: demowebapp12.azurecr.io
-       login-server: demowebapp12.azurecr.io
-       username: ${{ secrets.DOCKERIO_USERNAME }}
-       password: ${{ secrets.DOCKERIO_PASSWORD }}
+        registry: demowebapp12.azurecr.io
+        username: ${{ secrets.DOCKERIO_USERNAME }}
+        password: ${{ secrets.DOCKERIO_PASSWORD }}
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0.x' # Match the version used in Dockerfile
+        dotnet-version: '6.0.x'
 
     - name: Build Docker Image
-      run: docker build -t demowebapp12.azurecr.io/demowebapp12:latest -f VSRAdminAPI/Dockerfile .
-
+      run: |
+        docker build \
+          -t demowebapp12.azurecr.io/demowebapp12:latest \
+          -f VSRAdminAPI/Dockerfile \
+          --build-arg ASPNETCORE_ENVIRONMENT=Production \
+          --build-arg SWAGGER_ENABLED=true \
+          .
 
     - name: Push Docker Image to ACR
       run: docker push demowebapp12.azurecr.io/demowebapp12:latest
@@ -39,16 +43,26 @@ jobs:
     - name: Azure Login
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }} # Set in GitHub Secrets as JSON credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Deploy to Azure Web App
       run: |
-       az webapp config container set \
-        --name mydemo1221-appservice \
-        --resource-group demowebapp1221 \
-        --container-image-name demowebapp12.azurecr.io/demowebapp12:latest \
-        --container-registry-url https://demowebapp12.azurecr.io \
-        --container-registry-user demowebapp12 \
-        --container-registry-password 'aqT4zLweka1oOyUixLlw9tyH4omR6eCQ/63A/nvT0C+ACRAbu86j'
+        # Configure container settings
+        az webapp config container set \
+          --name mydemo1221-appservice \
+          --resource-group demowebapp1221 \
+          --docker-custom-image-name demowebapp12.azurecr.io/demowebapp12:latest \
+          --docker-registry-server-url https://demowebapp12.azurecr.io \
+          --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+          --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
 
-                
+        # Configure app settings for Swagger
+        az webapp config appsettings set \
+          --name mydemo1221-appservice \
+          --resource-group demowebapp1221 \
+          --settings \
+            ASPNETCORE_ENVIRONMENT=Production \
+            SWAGGER_ENABLED=true
+
+        # Restart the web app to apply changes
+        az webapp restart --name mydemo1221-appservice --resource-group demowebapp1221
